@@ -430,8 +430,9 @@ Subagent definitions: `agents/` folder.
 ## Two-tier Documentation
 
 **Type 1 — Task Docs** (`docs/tasks/TASK-XXX/`) — **gitignored trong framework source repo**
-- `requirements.md` — parsed từ issue (template: `templates/task-doc-requirements.md`)
+- `requirements.md` — parsed từ issue (template: `templates/task-doc-requirements.md` hoặc `templates/task-doc-canva-requirements.md`)
 - `analysis.md` — options đã cân nhắc
+- `ui-feedback.md` — báo cáo kiểm thử UI so với thiết kế Canva (template: `templates/ui-feedback.md`). Developer bắt buộc phải đọc và sửa các lỗi lệch giao diện từ file này.
 - `test-plan.md` — test cases
 - `verification.md` — test results, sign-off
 - `audit.md` — append-only log mọi skill chạy + user input verbatim (template: `templates/audit.md`)

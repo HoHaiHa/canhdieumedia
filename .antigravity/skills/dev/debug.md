@@ -1,12 +1,12 @@
 ---
-name: dev-debug
+name: dev:debug
 description: >
   Systematic debugging — tìm root cause trước khi fix. Reproduce → Localize → Reduce → Fix → Guard.
   Trigger khi: user nói "debug lỗi", "tìm nguyên nhân bug", "tại sao bị lỗi",
-  "fix bug", "investigate error", "lỗi không biết tại sao", hoặc gõ /dev-debug.
+  "fix bug", "investigate error", "lỗi không biết tại sao", hoặc gõ /dev:debug.
 ---
 
-# Skill: /dev-debug
+# /dev:debug
 **Role**: Developer  
 **Mục đích**: Systematic debugging — tìm root cause trước khi fix. Tránh "fix ngẫu nhiên cho đến khi hết lỗi".
 
@@ -21,18 +21,32 @@ Fix sai root cause = tạo thêm bugs.
 
 ### Bước 1 — Reproduce
 
-```
-## Tôi sẽ giúp debug vấn đề này.
+Dùng `question` tool để thu thập thông tin:
 
-Trước tiên:
-
-| # | Câu hỏi | Lựa chọn |
-|---|---------|---------|
-| 1 | Mô tả lỗi: gì xảy ra vs gì mong đợi? | _(điền vào)_ |
-| 2 | Steps to reproduce | _(điền vào — dù rough cũng được)_ |
-| 3 | Lỗi này mới xuất hiện hay luôn có? | A: Mới xuất hiện — sau thay đổi: ___ / B: Luôn có / C: Không chắc / D: Khác: ___ |
-| 4 | Error message / stack trace | _(paste vào đây nếu có)_ |
-```
+question({
+  questions: [{
+    question: "Mô tả lỗi: gì xảy ra vs gì mong đợi?",
+    header: "Mô tả lỗi",
+    options: [
+      { label: "Sẽ mô tả", description: "Cung cấp description + steps" },
+    ]
+  }, {
+    question: "Lỗi này mới xuất hiện hay luôn có?",
+    header: "Timing",
+    options: [
+      { label: "Mới xuất hiện", description: "Sau thay đổi gần đây" },
+      { label: "Luôn có", description: "Lỗi tồn tại từ lâu" },
+      { label: "Không chắc", description: "Chưa xác định được" },
+    ]
+  }, {
+    question: "Có error message / stack trace không?",
+    header: "Error info",
+    options: [
+      { label: "Có", description: "Sẽ paste stack trace" },
+      { label: "Không có", description: "Không có error message" },
+    ]
+  }]
+})
 
 **Ask First Gate**: Nếu lỗi xảy ra trên production với user thật → báo ngay cho team trước khi debug. Xem thêm `assets/ask-first-gates.md`.
 
@@ -42,7 +56,11 @@ Trước tiên:
 
 Spawn subagent để đọc code liên quan (read-only):
 
-> "Tìm code xử lý [behavior mô tả]. Trả về file:line và flow từ entry point đến điểm có thể fail. Không sửa gì."
+task(
+  description: "Find code related to reported bug",
+  prompt: "Tìm code xử lý [behavior mô tả]. Trả về file:line và flow từ entry point đến điểm có thể fail. Không sửa gì.",
+  subagent_type: "explorer"
+)
 
 Trình bày:
 
@@ -57,8 +75,20 @@ Hypothesis:
 - H2: [Giả thuyết 2]
 
 Tôi sẽ kiểm tra H1 trước vì [lý do].
-Bạn có thêm hypothesis nào dựa trên context bạn biết không?
 ```
+
+Dùng `question` tool:
+
+question({
+  questions: [{
+    question: "Bạn có thêm hypothesis nào dựa trên context bạn biết không?",
+    header: "Hypothesis",
+    options: [
+      { label: "Không", description: "Tiếp tục với hypothesis hiện tại" },
+      { label: "Có", description: "Sẽ bổ sung hypothesis" },
+    ]
+  }]
+})
 
 ### Bước 3 — Reduce
 
@@ -77,42 +107,35 @@ Lỗi có reproduce với code này không?
 
 ### Bước 4 — Fix
 
-Chỉ sau khi xác nhận root cause:
+Chỉ sau khi xác nhận root cause, dùng `question` tool:
 
-```
-## Root cause xác định: [Mô tả rõ]
-
-Đề xuất fix:
-- Fix A: [Targeted fix] — sửa đúng chỗ, ít side effect
-- Fix B: [Broader fix] — sửa cả pattern, nhiều file hơn
-
-Đề xuất Fix A trước (nhỏ hơn, dễ review hơn).
-
-| | Lựa chọn |
-|---|---------|
-| A | Đồng ý — Fix A |
-| B | Muốn Fix B (broader) |
-| C | Khác: ___ |
-```
+question({
+  questions: [{
+    question: "Root cause đã xác định. Chọn approach fix?",
+    header: "Fix",
+    options: [
+      { label: "Targeted fix", description: "Sửa đúng chỗ, ít side effect nhất" },
+      { label: "Broader fix", description: "Sửa cả pattern, nhiều file hơn" },
+    ]
+  }]
+})
 
 **Ask First Gate**: Nếu fix liên quan đến bất kỳ thay đổi nhạy cảm nào (`assets/ask-first-gates.md`) → cần senior review trước khi apply.
 
 ### Bước 5 — Guard
 
-Sau khi fix:
+Sau khi fix, dùng `question` tool:
 
-```
-## Fix đã apply.
-
-Tôi cũng sẽ thêm test để prevent regression:
-[Mô tả test case]
-
-| | Lựa chọn |
-|---|---------|
-| A | Không, đủ rồi |
-| B | Có — edge case: ___ |
-| C | Khác: ___ |
-```
+question({
+  questions: [{
+    question: "Đã apply fix. Cần thêm test để prevent regression không?",
+    header: "Guard",
+    options: [
+      { label: "Không cần", description: "Fix đã đủ" },
+      { label: "Cần thêm test", description: "Thêm regression test" },
+    ]
+  }]
+})
 
 ---
 

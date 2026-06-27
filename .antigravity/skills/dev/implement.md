@@ -1,27 +1,27 @@
 ---
-name: dev-implement
+name: dev:implement
 description: >
-  Implement code sau khi phương án đã chọn từ /dev-analyze. File-by-file với gate sau mỗi file.
+  Implement code sau khi phương án đã chọn từ /dev:analyze. File-by-file với gate sau mỗi file.
   Trigger khi: user nói "bắt đầu implement", "code theo plan đã chọn", "viết code cho task",
-  "start implementation", "implement feature", hoặc gõ /dev-implement.
+  "start implementation", "implement feature", hoặc gõ /dev:implement.
 ---
 
-# Skill: /dev-implement
+# /dev:implement
 **Role**: Developer  
-**Mục đích**: Implement code sau khi phương án đã chọn từ /dev-analyze. File-by-file với gate sau mỗi file.
+**Mục đích**: Implement code sau khi phương án đã chọn từ /dev:analyze. File-by-file với gate sau mỗi file.
 
 ---
 
-## Quan trọng: Chạy /dev-analyze trước
+## Quan trọng: Chạy /dev:analyze trước
 
-Skill này yêu cầu `docs/tasks/[TASK-ID]/analysis.md` đã tồn tại.
-Nếu chưa có → chạy `/dev-analyze` trước.
+Skill này yêu cầu `docs/tasks\[TASK-ID]\analysis.md` đã tồn tại.
+Nếu chưa có → chạy `/dev:analyze` trước.
 
 ---
 
 ## Cách spawn subagent
 
-Dùng **Agent tool** để spawn subagent. Mỗi subagent nhận context tối thiểu cần thiết — không pass full conversation history.
+Dùng **task tool** của OpenCode để spawn subagent. Mỗi subagent nhận context tối thiểu cần thiết — không pass full conversation history.
 
 ---
 
@@ -29,60 +29,50 @@ Dùng **Agent tool** để spawn subagent. Mỗi subagent nhận context tối t
 
 ### Bước 1 — Đọc analysis doc và báo cáo UI Feedback
 
-Đọc `docs/tasks/[TASK-ID]/analysis.md`:
+Đọc `docs/tasks\[TASK-ID]\analysis.md`:
 - Phương án đã chọn
 - Danh sách files cần thay đổi
 - Quyết định kỹ thuật đã confirm
 
-Đồng thời, kiểm tra sự tồn tại của báo cáo kiểm thử UI `docs/tasks/[TASK-ID]/ui-feedback.md` (nếu có):
+Đồng thời, kiểm tra sự tồn tại của báo cáo kiểm thử UI `docs/tasks\[TASK-ID]\ui-feedback.md` (nếu có):
 - Đọc danh sách các lỗi lệch UI, Spacing, Typography hoặc màu sắc.
 - Yêu cầu subagent planner đưa danh sách các lỗi UI lệch này vào kế hoạch code chi tiết và thứ tự implement các file frontend để sửa triệt để các lỗi giao diện so với Canva.
 
 ### Bước 1b — Gate: TDD Lane (opt-in)
 
-Trước khi implement, hỏi:
+Trước khi implement, dùng `question` tool:
 
-```
-## Mode implement
+question({
+  questions: [{
+    question: "Chọn mode implement?",
+    header: "Mode",
+    options: [
+      { label: "Standard", description: "Implement code trước, test sau (mặc định)" },
+      { label: "TDD", description: "Viết test trước, code sau (recommend cho business logic phức tạp)" },
+    ]
+  }]
+})
 
-| | Lựa chọn |
-|---|---------|
-| A | Standard — implement code trước, test sau (mặc định) |
-| B | TDD — viết test trước, code sau (recommend cho business logic phức tạp) |
-```
-
-**Nếu chọn TDD (B)**:
+**Nếu chọn TDD**:
 1. Với mỗi file business logic: viết test (failing) trước
 2. Gate: confirm test cases cover đủ ACs
 3. Implement code cho test pass
 4. Báo cáo: "Tests: N passing / M failing" sau mỗi file
 
-**Nếu chọn Standard (A)**: tiếp tục bình thường.
-
-**Chờ confirm.**
-
 ### Bước 2 — Gate: Xác nhận implementation plan
 
-```
-## Tôi sẽ implement [TASK-ID] theo Phương án [X].
+Dùng `question` tool:
 
-**Files cần thay đổi** (theo thứ tự):
-1. `[file 1]` — [create/modify/delete] — [lý do]
-2. `[file 2]` — [create/modify/delete] — [lý do]
-
-**Thứ tự implement**: [giải thích tại sao thứ tự này — dependencies]
-
-**Setup trước khi code**:
-- Branch: `feature/[TASK-ID]-[slug]`
-- DB migration cần tạo: [yes/no]
-- ENV variables mới: [list hoặc "none"]
-
-| | Lựa chọn |
-|---|---------|
-| A | Bắt đầu với `[file 1]` ngay |
-| B | Điều chỉnh thứ tự — thứ tự mới: ___ |
-| C | Khác: ___ |
-```
+question({
+  questions: [{
+    question: "Bắt đầu implement theo thứ tự files đã định?",
+    header: "Bắt đầu",
+    options: [
+      { label: "Bắt đầu ngay", description: "Implement file đầu tiên" },
+      { label: "Điều chỉnh", description: "Thay đổi thứ tự files" },
+    ]
+  }]
+})
 
 **Chờ confirm.**
 
@@ -104,31 +94,24 @@ Với **mỗi file**, theo thứ tự:
 - [Mô tả thay đổi 2]
 
 **Tests**: [Viết inline / Cần viết riêng / N/A]
-
-| | Lựa chọn |
-|---|---------|
-| A | Tiếp tục `[file tiếp theo]` |
-| B | Dừng lại — cần điều chỉnh: ___ |
-| C | Khác: ___ |
 ```
+
+Dùng `question` tool:
+
+question({
+  questions: [{
+    question: "File [N/Total] `[path]` đã xong. Tiếp tục?",
+    header: "Tiếp tục",
+    options: [
+      { label: "Tiếp tục", description: "Sang file tiếp theo" },
+      { label: "Dừng lại", description: "Cần điều chỉnh file này" },
+    ]
+  }]
+})
 
 **Chờ confirm trước khi sang file tiếp theo.**
 
-Nếu gặp code không như expected (missing dependency, unexpected state, conflict với existing code):
-
-```
-## ⚠️ Blocked tại `[path]`
-
-**Vấn đề**: [Mô tả cụ thể]
-
-| | Lựa chọn |
-|---|---------|
-| A | [Hướng giải quyết A] |
-| B | [Hướng giải quyết B] |
-| C | Khác: ___ |
-```
-
-**Không tự quyết định — luôn hỏi khi blocked.**
+Nếu gặp code không như expected (missing dependency, unexpected state, conflict với existing code) — dùng `question` tool để hỏi, không tự quyết định.
 
 ### Bước 4 — Gate: Post-implementation checklist
 
@@ -149,18 +132,26 @@ Sau khi tất cả files xong:
 - [ ] DB migration reversible (nếu có)
 ```
 
-**Chờ confirm dev self-check xong.**
+question({
+  questions: [{
+    question: "Dev self-check đã hoàn tất?",
+    header: "Self-check",
+    options: [
+      { label: "Đã check xong", description: "Tất cả items pass" },
+      { label: "Cần sửa", description: "Có item chưa pass" },
+    ]
+  }]
+})
 
 ### Bước 5 — Verification Gate: Diff Review + Self-Test
 
 Sau khi dev confirm Bước 4, spawn subagent để phân tích diff:
 
-> "Đọc `git diff main..HEAD` (hoặc diff của branch hiện tại). Trả về:
-> 1. **Impact summary**: những gì thay đổi, module nào bị ảnh hưởng, edge cases tiềm ẩn
-> 2. **Self-test steps**: 3-7 test steps cụ thể dựa trên thay đổi thực tế (không phải template chung).
->    Mỗi step: action rõ ràng, expected result rõ ràng.
->    Ưu tiên: happy path → edge case → error case.
-> CHỈ đọc, không sửa gì."
+task(
+  description: "Analyze git diff for verification",
+  prompt: "Đọc `git diff main..HEAD` (hoặc diff của branch hiện tại). Trả về:\n1. **Impact summary**: những gì thay đổi, module nào bị ảnh hưởng, edge cases tiềm ẩn\n2. **Self-test steps**: 3-7 test steps cụ thể dựa trên thay đổi thực tế (không phải template chung). Mỗi step: action rõ ràng, expected result rõ ràng. Ưu tiên: happy path → edge case → error case.\nCHỈ đọc, không sửa gì.",
+  subagent_type: "explorer"
+)
 
 Trình bày kết quả:
 
@@ -206,11 +197,11 @@ Sau khi nhận kết quả test, tạo `docs/tasks/[TASK-ID]/verification.md` d�
 **DỪNG TẠI ĐÂY.**
 
 Bước tiếp theo (theo thứ tự):
-1. `/sec-review` — security review trước khi tạo PR
-2. `/dev-pr` — tạo PR (sẽ tự đọc verification.md)
+1. `/sec:review` — security review trước khi tạo PR
+2. `/dev:pr` — tạo PR (sẽ tự đọc verification.md)
 ```
 
-**Không tự động chạy sec-review hay dev-pr.**
+**Không tự động chạy sec:review hay dev:pr.**
 
 ### Harness Delta Check
 
@@ -221,7 +212,7 @@ Trước khi kết thúc, tự hỏi:
 
 Nếu có → thêm entry vào `docs/improvement-backlog.md` ngay (không cần confirm human):
 ```
-| IB-XXX | dev-implement / [TASK-ID] | [mô tả friction] | [proposed fix] | open |
+| IB-XXX | dev:implement / [TASK-ID] | [mô tả friction] | [proposed fix] | open |
 ```
 
 ---
